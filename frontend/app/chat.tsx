@@ -11,6 +11,7 @@ import { hybridGreeting, hybridReply, getAIStatus } from '../src/ai/hybridChat';
 import { searchRecipes, getRecipeDetail } from '../src/ai/recipes';
 import type { Cuisine, Meal, Category } from '../src/data/recipes';
 import { answerTopic } from '../src/ai/knowledge';
+import { safeTimeHM } from '../src/utils/locale';
 
 function useThemeColors(theme: string) {
   if (theme === 'pink_pastel') return { bg: '#fff0f5', card: '#ffe4ef', primary: '#d81b60', text: '#3a2f33', muted: '#8a6b75', input: '#ffffff' };
@@ -20,7 +21,7 @@ function useThemeColors(theme: string) {
 }
 
 function fmtTime(ts: number, lang: 'de'|'en'|'pl') {
-  try { const loc = lang==='de'?'de-DE':(lang==='pl'?'pl-PL':'en-US'); return new Date(ts).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }); } catch { return ''; }
+  try { return safeTimeHM(ts, lang); } catch { return ''; }
 }
 function sleep(ms: number) { return new Promise(res => setTimeout(res, ms)); }
 
@@ -117,8 +118,14 @@ export default function ChatScreen() {
     const status = await getAIStatus();
     setAiStatus(status);
     
-    const replyText = await hybridReply(state, t);
-    typingAbort.current.abort = false; const typed = await typeOut(replyText);
+    let replyText = '';
+    try {
+      replyText = await hybridReply(state, t);
+    } catch (e) {
+      // hard fallback
+      replyText = await localReply(state, t);
+    }
+    typingAbort.current.abort = false; const typed = await typeOut(replyText || '');
     if (typed) { 
       const bot = { id: String(Date.now()+1), sender: 'bot' as const, text: typed, createdAt: Date.now()+1 }; 
       state.addChat(bot); 
@@ -280,7 +287,7 @@ export default function ChatScreen() {
                 <Text style={{ color: colors.text, fontWeight: '600', marginBottom: 6 }}>{lbl('Küche','Cuisine','Kuchnia')}</Text>
                 <ScrollView horizontal contentContainerStyle={{ gap: 8, paddingVertical: 4 }} showsHorizontalScrollIndicator={false}>
                   {CUISINES.map(c => (
-                    <TouchableOpacity key={c} onPress={() => setSelCuisine(c)} style={[styles.badge, { borderColor: colors.muted, backgroundColor: selCuisine===c?colors.primary:'transparent' }]}>
+                    <TouchableOpacity key={c} onPress={() => setSelCuisine(c)} style={[styles.badge, { borderColor: colors.muted, backgroundColor: selCuisine===c?colors.primary:'transparent' }]}> 
                       <Text style={{ color: selCuisine===c?'#fff':colors.text }}>{c==='any'?lbl('Alle','Any','Wszystkie'):c.toUpperCase()}</Text>
                     </TouchableOpacity>
                   ))}
@@ -290,7 +297,7 @@ export default function ChatScreen() {
                 <Text style={{ color: colors.text, fontWeight: '600', marginTop: 12, marginBottom: 6 }}>{lbl('Kategorie','Category','Kategoria')}</Text>
                 <ScrollView horizontal contentContainerStyle={{ gap: 8, paddingVertical: 4 }} showsHorizontalScrollIndicator={false}>
                   {CATS.map(c => (
-                    <TouchableOpacity key={c} onPress={() => setSelCat(c)} style={[styles.badge, { borderColor: colors.muted, backgroundColor: selCat===c?colors.primary:'transparent' }]}>
+                    <TouchableOpacity key={c} onPress={() => setSelCat(c)} style={[styles.badge, { borderColor: colors.muted, backgroundColor: selCat===c?colors.primary:'transparent' }]}> 
                       <Text style={{ color: selCat===c?'#fff':colors.text }}>
                         {c==='any'?lbl('Alle','Any','Wszystkie'):
                          c==='fleisch'?lbl('Fleisch','Meat','Mięso'):
@@ -308,7 +315,7 @@ export default function ChatScreen() {
                 <Text style={{ color: colors.text, fontWeight: '600', marginTop: 12, marginBottom: 6 }}>{lbl('Mahlzeit','Meal','Posiłek')}</Text>
                 <ScrollView horizontal contentContainerStyle={{ gap: 8, paddingVertical: 4 }} showsHorizontalScrollIndicator={false}>
                   {MEALS.map(m => (
-                    <TouchableOpacity key={m} onPress={() => setSelMeal(m)} style={[styles.badge, { borderColor: colors.muted, backgroundColor: selMeal===m?colors.primary:'transparent' }]}>
+                    <TouchableOpacity key={m} onPress={() => setSelMeal(m)} style={[styles.badge, { borderColor: colors.muted, backgroundColor: selMeal===m?colors.primary:'transparent' }]}> 
                       <Text style={{ color: selMeal===m?'#fff':colors.text }}>
                         {m==='any'?lbl('Alle','Any','Wszystkie'):
                          m==='breakfast'?lbl('Frühstück','Breakfast','Śniadanie'):
@@ -362,7 +369,7 @@ export default function ChatScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
             {detail && (
-              <View style={[styles.sheet, { backgroundColor: colors.bg, borderColor: colors.muted, maxHeight: '80%' }]}>
+              <View style={[styles.sheet, { backgroundColor: colors.bg, borderColor: colors.muted, maxHeight: '80%' }]}> 
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{detail.title[state.language as 'de'|'en'|'pl']}</Text>
                   <TouchableOpacity onPress={() => setDetailId(null)}>

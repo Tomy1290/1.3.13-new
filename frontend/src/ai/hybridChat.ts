@@ -19,9 +19,16 @@ const getEmergentLLMKey = () => {
   // Try multiple ways to get the key
   return Constants.expoConfig?.extra?.EXPO_PUBLIC_EMERGENT_LLM_KEY || 
          Constants.manifest?.extra?.EXPO_PUBLIC_EMERGENT_LLM_KEY ||
-         (typeof process !== 'undefined' ? process.env.EXPO_PUBLIC_EMERGENT_LLM_KEY : null) ||
+         (typeof process !== 'undefined' ? (process as any).env?.EXPO_PUBLIC_EMERGENT_LLM_KEY : null) ||
          'sk-emergent-e34Af18EdBf12063f7'; // Fallback
 };
+
+function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  const opts: RequestInit = { ...init, signal: controller.signal };
+  return fetch(input as any, opts).finally(() => clearTimeout(id));
+}
 
 /**
  * Test if Direct LLM is reachable by doing a simple health check
@@ -35,15 +42,14 @@ export async function testCloudConnection(): Promise<boolean> {
   
   try {
     // Simple test request to OpenAI API
-    const response = await fetch('https://api.openai.com/v1/models', {
+    const response = await fetchWithTimeout('https://api.openai.com/v1/models', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${EMERGENT_LLM_KEY}`,
         'Content-Type': 'application/json',
       },
-      signal: AbortSignal.timeout(3000) // 3 second timeout
-    });
-    return response.ok;
+    }, 3000);
+    return (response as any)?.ok === true;
   } catch (error) {
     console.warn('Direct LLM connection test failed:', error);
     return false;
@@ -66,7 +72,7 @@ export async function callCloudLLM(request: CloudChatRequest): Promise<string> {
       ? 'Jesteś Gugi, przyjaznym trenerem zdrowia. Odpowiadaj krótko i pomocnie po polsku.'
       : 'You are Gugi, a friendly health coach. Respond briefly and helpfully in English.';
 
-    const messages = [
+    const messages: Array<{ role: 'system'|'user'|'assistant'; content: string }> = [
       { role: 'system', content: systemPrompt }
     ];
 
@@ -91,7 +97,7 @@ export async function callCloudLLM(request: CloudChatRequest): Promise<string> {
       }
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${EMERGENT_LLM_KEY}`,
@@ -103,15 +109,14 @@ export async function callCloudLLM(request: CloudChatRequest): Promise<string> {
         max_tokens: 280,
         temperature: 0.4,
       }),
-      signal: AbortSignal.timeout(8000) // 8 second timeout
-    });
+    }, 8000);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API responded with status ${response.status}: ${errorText}`);
+    if (!(response as any)?.ok) {
+      const errorText = await (response as any).text?.();
+      throw new Error(`OpenAI API responded with status ${(response as any)?.status}: ${errorText}`);
     }
 
-    const data = await response.json();
+    const data = await (response as any).json();
     const content = data.choices?.[0]?.message?.content || '';
     
     if (!content.trim()) {

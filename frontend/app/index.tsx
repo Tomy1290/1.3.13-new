@@ -12,6 +12,7 @@ import CelebrationOverlay from "../src/components/CelebrationOverlay";
 import { predictNextStart } from "../src/utils/cycle";
 import PillIcon from "../src/components/icons/PillIcon";
 import ScaleIcon from "../src/components/icons/ScaleIcon";
+import { safeDateLabel } from "../src/utils/locale";
 
 function useThemeColors(theme: string) {
   if (theme === "pink_pastel") return { bg: "#fff0f5", card: "#ffe4ef", primary: "#d81b60", text: "#3a2f33", muted: "#8a6b75" };
@@ -52,7 +53,7 @@ export default function Home() {
   const todayKey = toKey(new Date());
   const day = days[currentDate] || { pills: { morning: false, evening: false }, drinks: { water: 0, coffee: 0, slimCoffee: false, gingerGarlicTea: false, waterCure: false, sport: false } } as any;
 
-  const dateLabel = React.useMemo(() => { try { const [y, m, d] = currentDate.split('-').map((n) => parseInt(n, 10)); const dt = new Date(y, m - 1, d); const locale = language === 'en' ? 'en-GB' : (language==='pl'?'pl-PL':'de-DE'); return dt.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' }); } catch { return currentDate; } }, [currentDate, language]);
+  const dateLabel = React.useMemo(() => { try { const [y, m, d] = currentDate.split('-').map((n) => parseInt(n, 10)); const dt = new Date(y, m - 1, d); return safeDateLabel(dt, language as any); } catch { return currentDate; } }, [currentDate, language]);
 
   const now = new Date();
   const { weekKey, dayKeys } = getWeekRange(now);
@@ -134,7 +135,7 @@ export default function Home() {
             <TouchableOpacity 
               accessibilityLabel={t('Morgens einnehmen', 'Take in the morning', 'Rano zażyć')}
               onPress={() => { 
-                togglePill(currentDate, 'morning'); 
+                try { togglePill(currentDate, 'morning'); } catch (e) { console.warn('toggle morning pill failed', e); }
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
               }} 
               style={[styles.toggle, { 
@@ -159,7 +160,7 @@ export default function Home() {
             <TouchableOpacity 
               accessibilityLabel={t('Abends einnehmen', 'Take in the evening', 'Wieczorem zażyć')}
               onPress={() => { 
-                togglePill(currentDate, 'evening'); 
+                try { togglePill(currentDate, 'evening'); } catch (e) { console.warn('toggle evening pill failed', e); }
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
               }} 
               style={[styles.toggle, { 
@@ -217,11 +218,11 @@ export default function Home() {
           <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ color: colors.text, fontWeight: '600' }}>{t('Wasser', 'Water', 'Woda')}</Text>
             <View style={{ flex: 1 }} />
-            <TouchableOpacity onPress={() => { incDrink(currentDate, 'water', -1); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Wasser verringern', 'Decrease water', 'Zmniejsz wodę')}>
+            <TouchableOpacity onPress={() => { try { incDrink(currentDate, 'water', -1); } catch (e) { console.warn('dec water failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Wasser verringern', 'Decrease water', 'Zmniejsz wodę')}>
               <Ionicons name='remove' size={16} color={colors.primary} />
             </TouchableOpacity>
             <Text style={{ color: colors.text, marginHorizontal: 10, minWidth: 18, textAlign: 'center' }}>{day.drinks.water}</Text>
-            <TouchableOpacity onPress={() => { incDrink(currentDate, 'water', +1); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Wasser erhöhen', 'Increase water', 'Zwiększ wodę')}>
+            <TouchableOpacity onPress={() => { try { incDrink(currentDate, 'water', +1); } catch (e) { console.warn('inc water failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Wasser erhöhen', 'Increase water', 'Zwiększ wodę')}>
               <Ionicons name='add' size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -230,27 +231,27 @@ export default function Home() {
           <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ color: colors.text, fontWeight: '600' }}>{t('Kaffee', 'Coffee', 'Kawa')}</Text>
             <View style={{ flex: 1 }} />
-            <TouchableOpacity onPress={() => { incDrink(currentDate, 'coffee', -1); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Kaffee verringern', 'Decrease coffee', 'Zmniejsz kawę')}>
+            <TouchableOpacity onPress={() => { try { incDrink(currentDate, 'coffee', -1); } catch (e) { console.warn('dec coffee failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Kaffee verringern', 'Decrease coffee', 'Zmniejsz kawę')}>
               <Ionicons name='remove' size={16} color={colors.primary} />
             </TouchableOpacity>
             <Text style={{ color: colors.text, marginHorizontal: 10, minWidth: 18, textAlign: 'center' }}>{day.drinks.coffee}</Text>
-            <TouchableOpacity onPress={() => { incDrink(currentDate, 'coffee', +1); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Kaffee erhöhen', 'Increase coffee', 'Zwiększ kawę')}>
+            <TouchableOpacity onPress={() => { try { incDrink(currentDate, 'coffee', +1); } catch (e) { console.warn('inc coffee failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.counterBtnSm, { borderColor: colors.primary }]} accessibilityLabel={t('Kaffee erhöhen', 'Increase coffee', 'Zwiększ kawę')}>
               <Ionicons name='add' size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
           {/* Toggles */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-            <TouchableOpacity onPress={() => { toggleFlag(currentDate, 'slimCoffee'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.slimCoffee ? colors.primary : 'transparent' }]} accessibilityLabel={t('Schlankkaffee', 'Slim coffee', 'Kawa fit')}>
+            <TouchableOpacity onPress={() => { try { toggleFlag(currentDate, 'slimCoffee'); } catch (e) { console.warn('toggle slimCoffee failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.slimCoffee ? colors.primary : 'transparent' }]} accessibilityLabel={t('Schlankkaffee', 'Slim coffee', 'Kawa fit')}>
               <Text style={{ color: day.drinks.slimCoffee ? '#fff' : colors.text }}>{t('Schlankkaffee', 'Slim coffee', 'Kawa fit')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { toggleFlag(currentDate, 'gingerGarlicTea'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.gingerGarlicTea ? colors.primary : 'transparent' }]} accessibilityLabel={t('Ingwer-Knoblauch-Tee', 'Ginger & garlic tea', 'Herbata imbirowo-czosnkowa')}>
+            <TouchableOpacity onPress={() => { try { toggleFlag(currentDate, 'gingerGarlicTea'); } catch (e) { console.warn('toggle gingerGarlicTea failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.gingerGarlicTea ? colors.primary : 'transparent' }]} accessibilityLabel={t('Ingwer-Knoblauch-Tee', 'Ginger & garlic tea', 'Herbata imbirowo-czosnkowa')}>
               <Text style={{ color: day.drinks.gingerGarlicTea ? '#fff' : colors.text }}>{t('Ingwer-Knoblauch-Tee', 'Ginger & garlic tea', 'Herbata imbir-czosnek')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { toggleFlag(currentDate, 'waterCure'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.waterCure ? colors.primary : 'transparent' }]} accessibilityLabel={t('Wasserkur', 'Water cure', 'Kuracja wodna')}>
+            <TouchableOpacity onPress={() => { try { toggleFlag(currentDate, 'waterCure'); } catch (e) { console.warn('toggle waterCure failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.waterCure ? colors.primary : 'transparent' }]} accessibilityLabel={t('Wasserkur', 'Water cure', 'Kuracja wodna')}>
               <Text style={{ color: day.drinks.waterCure ? '#fff' : colors.text }}>{t('Wasserkur', 'Water cure', 'Kuracja wodna')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { toggleFlag(currentDate, 'sport'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.sport ? colors.primary : 'transparent' }]} accessibilityLabel={t('Sport', 'Sport', 'Sport')}>
+            <TouchableOpacity onPress={() => { try { toggleFlag(currentDate, 'sport'); } catch (e) { console.warn('toggle sport failed', e); } Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={[styles.chip, { borderColor: colors.primary, backgroundColor: day.drinks.sport ? colors.primary : 'transparent' }]} accessibilityLabel={t('Sport', 'Sport', 'Sport')}>
               <Text style={{ color: day.drinks.sport ? '#fff' : colors.text }}>{t('Sport', 'Sport', 'Sport')}</Text>
             </TouchableOpacity>
           </View>
@@ -303,7 +304,7 @@ export default function Home() {
           {help.cycle ? <Text style={{ color: colors.muted, marginTop: 6 }}>{t('Starte/Beende deinen Zyklus. Über den Kalender erhältst du Übersicht und Prognosen.', 'Start/end your cycle. Open the calendar for overview and predictions.', 'Rozpocznij/zakończ cykl. Otwórz kalendarz dla przeglądu i prognoz.')}</Text> : null}
           {expectedNext ? (
             <Text style={{ color: colors.muted, marginTop: 6 }}>
-              {t('Nächster Zyklus erwartet am', 'Next cycle expected on', 'Następny cykl oczekiwany')} {new Date(expectedNext).toLocaleDateString(language==='en'?'en-GB':(language==='pl'?'pl-PL':'de-DE'))}
+              {t('Nächster Zyklus erwartet am', 'Next cycle expected on', 'Następny cykl oczekiwany')} {new Date(expectedNext).toDateString()}
             </Text>
           ) : null}
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
@@ -404,7 +405,7 @@ export default function Home() {
         </View>
 
         {/* Quick access */}
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}> 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: colors.text, fontWeight: '700' }}>{language==='de'?'Schnellzugriff':(language==='pl'?'Szybki dostęp':'Quick access')}</Text>
             <TouchableOpacity onPress={() => toggleHelp('quick')}>
@@ -454,7 +455,7 @@ export default function Home() {
                 <TouchableOpacity onPress={() => setWeightModal(false)} style={[styles.cta, { borderColor: colors.primary, borderWidth: 1 }]}>
                   <Text style={{ color: colors.text }}>{t('Abbrechen', 'Cancel', 'Anuluj')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { const normalized = (weightInput || '').replace(',', '.'); const val = parseFloat(normalized); if (!isNaN(val) && val > 0) { setWeight(currentDate, val); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setWeightModal(false); } }} style={[styles.cta, { backgroundColor: colors.primary }]}>
+                <TouchableOpacity onPress={() => { try { const normalized = (weightInput || '').replace(',', '.'); const val = parseFloat(normalized); if (!isNaN(val) && val > 0) { setWeight(currentDate, val); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setWeightModal(false); } } catch (e) { console.warn('set weight failed', e); } }} style={[styles.cta, { backgroundColor: colors.primary }]}>
                   <Text style={{ color: '#fff' }}>{t('Speichern', 'Save', 'Zapisz')}</Text>
                 </TouchableOpacity>
               </View>
