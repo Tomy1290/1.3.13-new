@@ -55,6 +55,8 @@ export type Profile = {
   heightCm?: number;
 };
 
+export type PhotoEntry = { id: string; base64: string; ts: number };
+
 export type AppState = {
   days: Record<string, DayData>;
   goal?: Goal;
@@ -84,6 +86,7 @@ export type AppState = {
   waterCupMl: number;
   lastChatLeaveAt?: number;
   profile: Profile;
+  gallery: Record<string, PhotoEntry[]>;
 
   setLanguage: (lng: Language) => void;
   setTheme: (t: ThemeName) => void;
@@ -129,6 +132,9 @@ export type AppState = {
   scheduleCycleNotifications: () => Promise<void>;
 
   setProfile: (patch: Partial<Profile>) => void;
+
+  addPhoto: (dateKey: string, base64: string) => void;
+  deletePhoto: (dateKey: string, id: string) => void;
 };
 
 const defaultDay = (dateKey: string): DayData => ({ date: dateKey, pills: { morning: false, evening: false }, drinks: { water: 0, coffee: 0, slimCoffee: false, gingerGarlicTea: false, waterCure: false, sport: false }, xpToday: {}, activityLog: [] });
@@ -141,6 +147,7 @@ export const useAppStore = create<AppState>()(
       currentDate: toKey(new Date()), notificationMeta: {}, hasSeededReminders: false, showOnboarding: true, eventHistory: {}, legendShown: false, rewardsSeen: {}, profileAlias: '', xpLog: [],
       aiInsightsEnabled: true, aiFeedback: {}, eventsEnabled: true, cycles: [], cycleLogs: {}, waterCupMl: 250, lastChatLeaveAt: 0,
       profile: {},
+      gallery: {},
 
       setLanguage: (lng) => { set({ language: lng }); get().recalcAchievements(); },
       setTheme: (t) => { const lvl = Math.floor(get().xp / 100) + 1; if (t === 'golden_pink' && lvl < 75) { return; } set({ theme: t }); get().recalcAchievements(); },
@@ -269,8 +276,23 @@ export const useAppStore = create<AppState>()(
       },
 
       setProfile: (patch) => set({ profile: { ...(get().profile||{}), ...patch } }),
+
+      addPhoto: (dateKey, base64) => {
+        const all = { ...(get().gallery || {}) };
+        const arr = [...(all[dateKey] || [])];
+        const entry = { id: `ph_${Date.now()}_${Math.random().toString(36).slice(2)}`, base64, ts: Date.now() } as PhotoEntry;
+        arr.push(entry);
+        all[dateKey] = arr;
+        set({ gallery: all });
+      },
+      deletePhoto: (dateKey, id) => {
+        const all = { ...(get().gallery || {}) };
+        const arr = [...(all[dateKey] || [])].filter(p => p.id !== id);
+        all[dateKey] = arr;
+        set({ gallery: all });
+      },
     }),
-    { name: "scarlett-app-state", storage: createJSONStorage(() => mmkvAdapter), partialize: (s) => s, version: 22, onRehydrateStorage: () => (state) => {
+    { name: "scarlett-app-state", storage: createJSONStorage(() => mmkvAdapter), partialize: (s) => s, version: 23, onRehydrateStorage: () => (state) => {
       if (!state) return;
       const days = state.days || {} as any;
       for (const k of Object.keys(days)) {
@@ -282,6 +304,7 @@ export const useAppStore = create<AppState>()(
       }
       if (typeof (state as any).waterCupMl !== 'number') (state as any).waterCupMl = 250;
       if (typeof (state as any).lastChatLeaveAt !== 'number') (state as any).lastChatLeaveAt = 0;
+      if (!(state as any).gallery) (state as any).gallery = {};
       // Coerce reminder times to HH:MM strings
       try {
         const r = (state as any).reminders || [];
