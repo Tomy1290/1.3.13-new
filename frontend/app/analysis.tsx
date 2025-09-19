@@ -42,6 +42,11 @@ export default function AnalysisScreen() {
   }, [weightArrAll, range, from, to]);
 
   const weightSeries = useMemo(() => weightArr.map((d) => ({ value: Number(d.weight) || 0 })), [weightArr]);
+  const weightLabels = useMemo(() => weightArr.map((d, i) => {
+    const dt = new Date(d.date);
+    const label = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}`;
+    return i % 2 === 0 ? label : '';
+  }), [weightArr]);
 
   const screenW = Dimensions.get('window').width;
   const chartWidth = Math.max(screenW - 32, weightSeries.length * 44);
@@ -152,8 +157,8 @@ export default function AnalysisScreen() {
           {showTo && (<DateTimePicker value={to || new Date()} mode='date' onChange={(e, d) => { setShowTo(false); if (d) setTo(d); }} />)}
           {weightSeries.length > 1 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator>
-              <View style={{ width: chartWidth, height: 240, justifyContent: 'center' }}>
-                <LineChart data={weightSeries} color={colors.primary} thickness={2} hideRules={false} showYAxisText yAxisTextStyle={{ color: colors.muted }} yAxisColor={colors.muted} xAxisColor={colors.muted} noOfSections={4} areaChart startFillColor={colors.primary} endFillColor={colors.primary} startOpacity={0.15} endOpacity={0.01} initialSpacing={12} spacing={32} />
+              <View style={{ width: chartWidth, height: 260, justifyContent: 'center' }}>
+                <LineChart data={weightSeries} color={colors.primary} thickness={2} hideRules={false} showYAxisText yAxisTextStyle={{ color: colors.muted }} yAxisColor={colors.muted} xAxisColor={colors.muted} noOfSections={4} areaChart startFillColor={colors.primary} endFillColor={colors.primary} startOpacity={0.15} endOpacity={0.01} initialSpacing={12} spacing={32} xAxisLabelTexts={weightLabels} xAxisLabelTextStyle={{ color: colors.muted, fontSize: 10 }} xAxisThickness={1} />
               </View>
             </ScrollView>
           ) : (
@@ -162,7 +167,7 @@ export default function AnalysisScreen() {
         </View>
 
         {/* Premium Insights */}
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}> 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name='sparkles' size={18} color={colors.primary} />
@@ -194,7 +199,7 @@ export default function AnalysisScreen() {
         </View>
 
         {/* KI Pro+++ */}
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}> 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name='pulse' size={18} color={colors.primary} />
