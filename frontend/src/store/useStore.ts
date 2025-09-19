@@ -316,10 +316,8 @@ export const useAppStore = create<AppState>()(
   )
 );
 
-try {
-  (useAppStore as any).subscribe((s: any) => {
-    try { storage.set('scarlett-backup', JSON.stringify(s)); } catch {}
-  });
-} catch {}
+// Disabled device-side archive backup to MMKV per user request
+// Previously: storage.set('scarlett-backup', JSON.stringify(s)) on every state change
+// If needed in future, re-enable with explicit user consent.
 
 export function useLevel() { const xp = useAppStore((s) => s.xp); const level = Math.floor(xp / 100) + 1; return { level, xp }; }
