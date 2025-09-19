@@ -358,3 +358,6 @@ agent_communication:
     message: "🎉 ALL REQUESTED FIXES COMPLETED! ✅ Weekly Events: Fixed title display by calling title function with language parameter ✅ Notifications: Updated to modern expo-notifications format with proper trigger types ✅ Cloud LLM: Implemented hybrid system with automatic fallback (Cloud → Local) ✅ AI Status: Added visual indicator (green=cloud, orange=local) ✅ Version: Updated to 1.2.6 with versionCode 5. Backend confirmed working with Emergent LLM Key integrated. App ready for user testing."
   - agent: "main"
     message: "🔧 NEW FIXES IMPLEMENTED v1.2.21! ✅ HyperOS Detection: Auto-detects HyperOS/MIUI devices and uses seconds triggers instead of date triggers to prevent immediate firing ✅ Chat Recipe System: Complete filter modal with cuisine/category/meal selection, search, results display, and recipe detail sharing ✅ Offline Chat Variations: Added response cache system to prevent repetitive answers with 30min rotation and additional context tips. All fixes ready for testing."
+
+  - agent: "main"
+    message: "Configuring MongoDB Atlas: adding /app/backend/.env with MONGO_URL (mongodb+srv) and DB_NAME=scarlett; will restart backend and verify /api/status."
