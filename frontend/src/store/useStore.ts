@@ -28,7 +28,7 @@ export type Cycle = { start: string; end?: string };
 export type Goal = { targetWeight: number; targetDate: string; startWeight: number; active: boolean };
 export type Reminder = { id: string; type: string; time: string; enabled: boolean; label?: string };
 export type ChatMessage = { id: string; sender: "user" | "bot"; text: string; createdAt: number };
-export type SavedMessage = { id: string; title: string; category?: string; tags?: string[]; text: string; createdAt: number };
+export type SavedMessage = { id: string; title: string; category?: string; tags?: string[]; text?: string; createdAt: number };
 
 export type RewardsSeen = { golden?: boolean; extStats?: boolean; vip?: boolean; insights?: boolean; legend?: boolean };
 export type XpLogEntry = { id: string; ts: number; amount: number; source: 'achievement'|'event'|'combo'|'other'; note?: string };
@@ -45,6 +45,14 @@ export type CycleLog = {
   headache?: boolean;
   nausea?: boolean;
   updatedAt?: number;
+};
+
+export type Profile = {
+  avatarBase64?: string;
+  name?: string;
+  dob?: string; // YYYY-MM-DD
+  gender?: 'female'|'male'|'other'|'na';
+  heightCm?: number;
 };
 
 export type AppState = {
@@ -75,6 +83,7 @@ export type AppState = {
   cycleLogs: Record<string, CycleLog>;
   waterCupMl: number;
   lastChatLeaveAt?: number;
+  profile: Profile;
 
   setLanguage: (lng: Language) => void;
   setTheme: (t: ThemeName) => void;
@@ -118,6 +127,8 @@ export type AppState = {
 
   recalcAchievements: () => void;
   scheduleCycleNotifications: () => Promise<void>;
+
+  setProfile: (patch: Partial<Profile>) => void;
 };
 
 const defaultDay = (dateKey: string): DayData => ({ date: dateKey, pills: { morning: false, evening: false }, drinks: { water: 0, coffee: 0, slimCoffee: false, gingerGarlicTea: false, waterCure: false, sport: false }, xpToday: {}, activityLog: [] });
@@ -126,9 +137,10 @@ function clamp(n: number, min: number, max: number) { return Math.max(min, Math.
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      days: {}, reminders: [], chat: [], saved: [], achievementsUnlocked: [], xp: 0, xpBonus: 0, language: "de", theme: "pink_default", appVersion: "1.2.21",
+      days: {}, reminders: [], chat: [], saved: [], achievementsUnlocked: [], xp: 0, xpBonus: 0, language: "de", theme: "pink_default", appVersion: "1.3.2",
       currentDate: toKey(new Date()), notificationMeta: {}, hasSeededReminders: false, showOnboarding: true, eventHistory: {}, legendShown: false, rewardsSeen: {}, profileAlias: '', xpLog: [],
       aiInsightsEnabled: true, aiFeedback: {}, eventsEnabled: true, cycles: [], cycleLogs: {}, waterCupMl: 250, lastChatLeaveAt: 0,
+      profile: {},
 
       setLanguage: (lng) => { set({ language: lng }); get().recalcAchievements(); },
       setTheme: (t) => { const lvl = Math.floor(get().xp / 100) + 1; if (t === 'golden_pink' && lvl < 75) { return; } set({ theme: t }); get().recalcAchievements(); },
@@ -255,8 +267,10 @@ export const useAppStore = create<AppState>()(
           }
         } catch {}
       },
+
+      setProfile: (patch) => set({ profile: { ...(get().profile||{}), ...patch } }),
     }),
-    { name: "scarlett-app-state", storage: createJSONStorage(() => mmkvAdapter), partialize: (s) => s, version: 21, onRehydrateStorage: () => (state) => {
+    { name: "scarlett-app-state", storage: createJSONStorage(() => mmkvAdapter), partialize: (s) => s, version: 22, onRehydrateStorage: () => (state) => {
       if (!state) return;
       const days = state.days || {} as any;
       for (const k of Object.keys(days)) {
