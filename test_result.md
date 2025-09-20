@@ -346,7 +346,7 @@ frontend:
   - task: "Remove EAS and prepare Codemagic Yarn APK build"
     implemented: true
     working: "NA"
-    file: "/app/frontend/eas.json"
+    file: "/app/codemagic.yaml"
     stuck_count: 0
     priority: "high"
     needs_retesting: true
