@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Image, View, Text } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initializeNotifications, cancelAllNotifications } from '../src/utils/notifications';
 import { scheduleCycleNotifications } from '../src/utils/cycleNotifications';
 import { useAppStore } from "../src/store/useStore";
@@ -27,7 +28,7 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style={barStyle as any} />
       <Stack screenOptions={{ headerShown: false }} />
       {bootVisible ? (
@@ -36,6 +37,6 @@ export default function RootLayout() {
           <Text style={{ marginTop: 12, color: theme==='pink_vibrant' ? '#ffffff' : '#3a2f33' }}>created by Gugi</Text>
         </View>
       ) : null}
-    </>
+    </GestureHandlerRootView>
   );
 }

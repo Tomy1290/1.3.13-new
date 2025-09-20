@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Fix: Offline-Chat is not reacting correctly; recipes are suggested but not shown/found, and answers for period/cycle questions are repetitive. Fix: Chat header-buttons for recipes/categories do not react. Integrate HyperOS-specific device detection to automatically use `seconds` triggers for notifications on these devices."
+user_problem_statement: "Fix: Offline-Chat is not reacting correctly; recipes are suggested but not shown/found, and answers for period/cycle questions are repetitive. Fix: Chat header-buttons for recipes/categories do not react. Integrate HyperOS-specific device detection to automatically use `seconds` triggers for notifications on these devices. Zusätzlich: Auf Android crashen die Dashboard-Buttons 'Galerie' und 'Profil'. Entferne EAS vollständig und baue APKs mit Yarn auf Codemagic."
 backend:
   - task: "API: GET /api/"
     implemented: true
@@ -230,7 +230,7 @@ frontend:
         comment: "VIP-Verlauf 30, Tipp speichern, Zeitstempel, smooth scroll."
       - working: true
         agent: "testing"
-        comment: "✅ MOBILE E2E PASSED - Chat page fully functional. VIP gate working (L<50 shows 5 messages, L>=50 shows 30). Message sending works, timestamps visible. Quick-action save (bookmark) works. Settings link navigation works. Mobile responsive."
+        comment: "✅ MOBILE E2E PASSED - Chat page fully functional. VIP gate working (L&lt;50 shows 5 messages, L&gt;=50 shows 30). Message sending works, timestamps visible. Quick-action save (bookmark) works. Settings link navigation works. Mobile responsive."
   - task: "Settings Toggles (Insights, Events)"
     implemented: true
     working: true
@@ -329,35 +329,48 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "✅ IMPLEMENTED: Removed backend dependency and implemented direct OpenAI API calls in frontend using Emergent LLM Key. Chat now connects directly to OpenAI GPT-4o-mini with proper error handling and fallback to local AI."
+  - task: "Fix Android crash: Dashboard → Galerie/Profil"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/_layout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "Button Gallerie und Profil crashen im Dashboard beim anklicken (Android)."
+      - working: "NA"
+        agent: "main"
+        comment: "Wrapped app root with GestureHandlerRootView to satisfy react-native-gesture-handler requirements on Android; likely source of crash when opening Gallery screen using PinchGestureHandler."
+  - task: "Remove EAS and prepare Codemagic Yarn APK build"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/eas.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "EAS killt beim Build den Code – bitte alles EAS entfernen. APK wird mit Yarn bei Codemagic gebaut."
+      - working: "NA"
+        agent: "main"
+        comment: "Neutralized eas.json (set to {}), ensure Codemagic uses expo prebuild + Gradle without EAS. No EAS references in app.json/package.json."
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: true
 
 test_plan:
   current_focus:
-    - "HyperOS Device Detection for Notifications"
-    - "Chat Recipe Filter System"
-    - "Offline Chat Repetitive Responses Fix"
-    - "Direct Frontend LLM Integration"
+    - "Fix Android crash: Dashboard → Galerie/Profil"
+    - "Remove EAS and prepare Codemagic Yarn APK build"
   stuck_tasks: []
   test_all: false
-  test_priority: "completed"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Bitte zuerst Backend /api Endpoints testen (GET, POST/GET status). Danach Frontend E2E (Navigation, Modals, VIP-Chat, Events, Analysis). Bei Fehlern bitte genaue Repro + Logs zurückgeben."
-  - agent: "testing"
-    message: "✅ Backend API testing COMPLETED successfully. Both GET /api/ and POST/GET /api/status endpoints are working correctly. MongoDB connection is functional. Created backend_test.py for comprehensive API testing. All services (backend, mongodb) confirmed running via supervisorctl. Ready for frontend testing if needed."
-  - agent: "testing"
-    message: "🎉 COMPREHENSIVE MOBILE E2E TESTING COMPLETED SUCCESSFULLY! Fixed missing expo-linear-gradient dependency. Tested all major flows on Android Pixel 6 Pro dimensions (412x915): ✅ Dashboard (Event cards, Chains teaser, Rewards) ✅ Achievements (Top-3 chains, All chains, Rewards, Unlocks) ✅ Analysis (Weight chart, Scale toggle, Help hints, L10 Extended Stats, L75 AI Insights with feedback) ✅ Chat (VIP gate, Message sending, Timestamps, Quick-action save, Settings link) ✅ Settings (Insights/Events toggles) ✅ Events Archive (12 weeks, completion status) ✅ Saved Messages (CRUD operations) ✅ Data Persistence (reload test). All navigation via UI buttons/links as requested. Mobile responsiveness verified. No critical issues found."
-  - agent: "main"
-    message: "Fixed Weekly Events display bug (weeklyEvent.title function needs language parameter) and modernized notification system (CalendarTriggerInput/DateTriggerInput format). Need to test these fixes and then implement Cloud LLM integration."
-  - agent: "main"
-    message: "🎉 ALL REQUESTED FIXES COMPLETED! ✅ Weekly Events: Fixed title display by calling title function with language parameter ✅ Notifications: Updated to modern expo-notifications format with proper trigger types ✅ Cloud LLM: Implemented hybrid system with automatic fallback (Cloud → Local) ✅ AI Status: Added visual indicator (green=cloud, orange=local) ✅ Version: Updated to 1.2.6 with versionCode 5. Backend confirmed working with Emergent LLM Key integrated. App ready for user testing."
-  - agent: "main"
-    message: "🔧 NEW FIXES IMPLEMENTED v1.2.21! ✅ HyperOS Detection: Auto-detects HyperOS/MIUI devices and uses seconds triggers instead of date triggers to prevent immediate firing ✅ Chat Recipe System: Complete filter modal with cuisine/category/meal selection, search, results display, and recipe detail sharing ✅ Offline Chat Variations: Added response cache system to prevent repetitive answers with 30min rotation and additional context tips. All fixes ready for testing."
-
-  - agent: "main"
-    message: "Configuring MongoDB Atlas: adding /app/backend/.env with MONGO_URL (mongodb+srv) and DB_NAME=scarlett; will restart backend and verify /api/status."
+    message: "Added GestureHandlerRootView at root to fix RNGH-related crash on Android when opening Gallery. Removed EAS by neutralizing eas.json. Please test Android navigation Dashboard → Galerie & Profil and confirm Codemagic APK build (yarn install → expo prebuild android → gradle assembleRelease) works."
