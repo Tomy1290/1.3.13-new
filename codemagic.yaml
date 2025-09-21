@@ -22,21 +22,46 @@ workflows:
           include: true
           source: true
     scripts:
+      - name: Show environment
+        script: |
+          node -v
+          npm -v || true
+          yarn -v || true
+          java -version
+          echo "Working dir: $CM_BUILD_DIR"
+          ls -la
+          echo "Frontend dir contents:" && ls -la frontend
+      - name: Clean caches (Metro & Gradle)
+        script: |
+          cd frontend
+          rm -rf .metro-cache || true
+          rm -rf node_modules/.cache || true
+          cd android
+          ./gradlew clean --no-daemon || true
       - name: Install dependencies
         script: |
           cd frontend
           rm -f package-lock.json
-          yarn install --non-interactive
+          yarn install --non-interactive --frozen-lockfile
+          npx expo --version
+          # Ensure babel config exists (reanimated plugin & expo-router)
+          test -f babel.config.js || (echo "Missing frontend/babel.config.js" && exit 1)
       - name: Expo prebuild (Android)
         script: |
           cd frontend
           npx expo prebuild --platform android --non-interactive --clean
-      - name: Build APK
+      - name: Build APK (with logs)
         script: |
+          set -o pipefail
           cd frontend/android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --stacktrace --info | tee gradle-build.log
+          echo "Problems report (if any):"
+          if [ -f build/reports/problems/problems-report.html ]; then
+            ls -la build/reports/problems
+          fi
     artifacts:
       - frontend/android/app/build/outputs/apk/release/*.apk
+      - frontend/android/gradle-build.log
     publishing:
       email:
         recipients:
