@@ -442,10 +442,6 @@ export default function Home() {
               <Ionicons name="help-circle" size={18} color={colors.primary} />
               <Text style={{ color: colors.text, marginTop: 6 }}>FAQ</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/profile'); }} style={[styles.quick, { backgroundColor: colors.bg }]} accessibilityLabel='Profil'>
-              <Ionicons name="person-circle" size={18} color={colors.primary} />
-              <Text style={{ color: colors.text, marginTop: 6 }}>{language==='de'?'Profil':(language==='pl'?'Profil':'Profile')}</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
