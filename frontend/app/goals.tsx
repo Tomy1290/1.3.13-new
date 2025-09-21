@@ -159,26 +159,29 @@ export default function GoalsScreen() {
       // Labels density: ~6 labels max
       const labelEvery = Math.max(1, Math.ceil(dates.length / 6));
       const labels: string[] = [];
+      const dateKeys: string[] = [];
       const targetW = Number((targetWInput||effectiveStartWeight));
       // Interpolate planned line and sample actual line (forward-fill last known)
-      const planned: {value:number, customDataPoint?: ()=>JSX.Element}[] = [];
-      const actual: {value:number, customDataPoint?: ()=>JSX.Element}[] = [];
+      const planned: {value:number}[] = [];
+      const actual: {value:number}[] = [];
       let lastKnown = effectiveStartWeight;
       dates.forEach((d, idx) => {
         const k = toKey(d);
+        dateKeys.push(k);
         if (typeof weightMap[k] === 'number') lastKnown = weightMap[k];
         const dayPos = Math.min(totalDays, Math.max(0, daysBetween(start, d)));
         const plannedVal = effectiveStartWeight + (targetW - effectiveStartWeight) * (dayPos / totalDays);
         const isToday = k === todayKey;
         planned.push({ value: plannedVal });
-        actual.push({ value: lastKnown, ...(isToday ? { customDataPoint: () => (<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary, borderWidth: 2, borderColor: '#fff' }} />) } : {}) });
+        actual.push({ value: lastKnown });
         // labels
         const dt = d; const lbl = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}`;
         if (idx % labelEvery === 0 || isToday || idx===dates.length-1 || idx===0) labels.push(lbl); else labels.push('');
       });
       // spacing to fit width
       const spacing = Math.max(12, Math.floor((chartWidth - 24) / Math.max(1, dates.length-1)));
-      return { planned, actual, labels, spacing };
+      const todayIndex = dateKeys.indexOf(todayKey);
+      return { planned, actual, labels, spacing, dateKeys, todayIndex };
     } catch { return null; }
   }, [effectiveStartDate, effectiveStartWeight, targetDateInput, targetWInput, weights, state.days, state.theme]);
 
@@ -292,8 +295,41 @@ export default function GoalsScreen() {
                 xAxisLabelTexts={chartData.labels}
                 xAxisLabelTextStyle={{ color: colors.muted, fontSize: 10 }}
                 xAxisThickness={1}
+                focusEnabled
+                showDataPointOnPress
+                pointerConfig={{
+                  activatePointersOnLongPress: true,
+                  pointerStripHeight: 200,
+                  pointerStripColor: colors.muted,
+                  pointerStripWidth: 1,
+                  pointerColor: colors.muted,
+                  autoAdjustPointerLabelPosition: true,
+                  pointerLabelComponent: (items) => {
+                    try {
+                      const idx = (items && items[0] && typeof items[0].index === 'number') ? items[0].index : 0;
+                      const dateKey = chartData.dateKeys[idx] || '';
+                      const dt = dateKey ? new Date(dateKey) : null;
+                      const label = dt ? `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}` : '';
+                      const ist = items?.[0]?.value ?? undefined;
+                      const soll = items?.[1]?.value ?? undefined;
+                      return (
+                        <View style={{ backgroundColor: colors.card, padding: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.muted, minWidth: 140 }}>
+                          <Text style={{ color: colors.text, fontWeight: '700' }}>{label}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                            <View style={{ width: 10, height: 3, backgroundColor: colors.primary, marginRight: 6 }} />
+                            <Text style={{ color: colors.text }}>Ist: {typeof ist==='number'? ist.toFixed(1): '—'} kg</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                            <View style={{ width: 10, height: 3, backgroundColor: '#2bb673', marginRight: 6 }} />
+                            <Text style={{ color: colors.text }}>Soll: {typeof soll==='number'? soll.toFixed(1): '—'} kg</Text>
+                          </View>
+                        </View>
+                      );
+                    } catch { return <View />; }
+                  },
+                }}
               />
-              <Text style={{ color: colors.muted, marginTop: 6 }}>Heutiger Punkt ist markiert.</Text>
+              <Text style={{ color: colors.muted, marginTop: 6 }}>Heutiger Punkt ist markiert. Tippe oder halte auf die Linie, um Werte anzuzeigen.</Text>
             </View>
           )}
         </View>
