@@ -11,7 +11,7 @@
     "ios": { "supportsTablet": true },
     "android": {
       "package": "de.scarlett.gesundheitstracking",
-      "versionCode": 22,
+      "versionCode": 23,
       "adaptiveIcon": { "foregroundImage": "./assets/images/adaptive-icon.png", "backgroundColor": "#ffffff" },
       "enableProguardInReleaseBuilds": true,
       "edgeToEdgeEnabled": true,
