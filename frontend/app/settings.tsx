@@ -275,6 +275,20 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Quick link: Profil */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}> 
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name='person-circle' size={18} color={colors.primary} />
+              <Text style={{ color: colors.text, fontWeight: '700', marginLeft: 8 }}>{state.language==='de'?'Profil':(state.language==='pl'?'Profil':'Profile')}</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/profile')} style={[styles.badge, { borderColor: colors.muted }]}>
+              <Text style={{ color: colors.text }}>{state.language==='de'?'Öffnen':(state.language==='pl'?'Otwórz':'Open')}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={{ color: colors.muted, marginTop: 6 }}>{state.language==='de'?'Avatar, persönliche Daten und BMI verwalten.':(state.language==='pl'?'Zarządzaj avatarem, danymi i BMI.':'Manage avatar, personal data and BMI.')}</Text>
+        </View>
+
         {/* Drinks settings */}
         <View style={[styles.card, { backgroundColor: colors.card }]}> 
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -382,20 +396,6 @@ export default function SettingsScreen() {
             <TouchableOpacity onPress={importData} style={[styles.badge, { borderColor: colors.muted }]}><Text style={{ color: colors.text }}>{state.language==='de'?'Import':(state.language==='pl'?'Import':'Import')}</Text></TouchableOpacity>
           </View>
         </View>
-
-        {/* Debugging deaktiviert */}
-        {/*
-        <View style={[styles.card, { backgroundColor: colors.card }]}> 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name='bug' size={18} color={colors.primary} />
-              <Text style={{ color: colors.text, fontWeight: '700', marginLeft: 8 }}>Debug – Notifications</Text>
-            </View>
-            <Switch value={false} onValueChange={()=>{}} thumbColor={'#fff'} trackColor={{ true: colors.primary, false: colors.muted }} />
-          </View>
-          <Text style={{ color: colors.muted, marginTop: 6 }}>Debug deaktiviert.</Text>
-        </View>
-        */}
 
         {/* App info */}
         <View style={[styles.card, { backgroundColor: colors.card }]}> 

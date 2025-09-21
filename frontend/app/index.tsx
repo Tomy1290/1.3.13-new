@@ -6,7 +6,7 @@ import { useAppStore, useLevel } from "../src/store/useStore";
 import { useRouter } from "expo-router";
 import * as Haptics from 'expo-haptics';
 import { computeChains } from "../src/gamification/chains";
-import { EVENTS, getWeekRange } from "../src/gamification/events";
+import { EVENTS, getWeekRange, getCurrentWeeklyEvent, computeEventProgress } from "../src/gamification/events";
 import { toKey } from "../src/utils/date";
 import CelebrationOverlay from "../src/components/CelebrationOverlay";
 import { predictNextStart } from "../src/utils/cycle";
@@ -57,11 +57,24 @@ export default function Home() {
 
   const now = new Date();
   const { weekKey, dayKeys } = getWeekRange(now);
+
+  // Chains (unchanged)
   const chainsAll = computeChains(state);
-  // choose current chain by deterministic index tied to weekKey
   const chainIdx = Math.abs(weekKey.split('').reduce((a,c)=>a+c.charCodeAt(0),0)) % Math.max(1, chainsAll.length);
   const currentChain = chainsAll[chainIdx];
-  const evCompleted = currentChain ? currentChain.nextPercent >= 100 : false;
+
+  // Weekly Event (1.1.3 style) based on events config
+  const currentEvent = getCurrentWeeklyEvent(now);
+  const eventProgress = computeEventProgress(dayKeys, state, currentEvent);
+  useEffect(() => {
+    if (state.eventsEnabled === false) return;
+    if (eventProgress.completed) {
+      const hist = state.eventHistory[weekKey];
+      if (!hist?.completed) {
+        try { state.completeEvent(weekKey, { id: currentEvent.id, xp: currentEvent.xp }); } catch {}
+      }
+    }
+  }, [eventProgress.completed, weekKey, currentEvent?.id]);
 
   const [weightModal, setWeightModal] = useState(false);
   const [weightInput, setWeightInput] = useState<string>(day?.weight ? String(day.weight) : "");
@@ -85,6 +98,8 @@ export default function Home() {
     const chains = computeChains(state);
     return chains.sort((a,b) => (b.nextPercent - a.nextPercent))[0];
   }, [state.days, state.goal, state.reminders, state.chat, state.saved, state.achievementsUnlocked, state.xp, state.language, state.theme]);
+
+  const lng2 = state.language === 'en' ? 'en' : 'de';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -280,7 +295,7 @@ export default function Home() {
             </TouchableOpacity>
             <TouchableOpacity style={[styles.cta, { borderColor: colors.primary, borderWidth: 1 }]} onPress={() => router.push('/goals')}>
               <Ionicons name='flag' size={16} color={colors.text} />
-              <Text style={{ color: colors.text, marginLeft: 6 }}>{language==='de'?'Zielgewicht':(language==='pl'?'Waga docelowa':'Target weight')}</Text>
+              <Text style={{ color: colors.text, marginLeft: 6 }}>{language==='de'?'Ziel':(language==='pl'?'Cel':'Goal')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.cta, { borderColor: colors.primary, borderWidth: 1 }]} onPress={() => router.push('/gallery')}>
               <Ionicons name='images' size={16} color={colors.text} />
@@ -351,7 +366,7 @@ export default function Home() {
           )}
         </View>
 
-        {/* Weekly Event (based on current chain status) */}
+        {/* Weekly Event (1.1.3 style) */}
         <View style={[styles.card, { backgroundColor: colors.card }]}> 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -364,17 +379,14 @@ export default function Home() {
           </View>
           {state.eventsEnabled === false ? (
             <Text style={{ color: colors.muted, marginTop: 6 }}>{t('Events sind deaktiviert (siehe Einstellungen).', 'Events are disabled (see Settings).', 'Wydarzenia są wyłączone (patrz Ustawienia).')}</Text>
-          ) : currentChain ? (
-            <View style={{ marginTop: 6 }}>
-              <Text style={{ color: colors.text }}>{currentChain.title}</Text>
-              {currentChain.nextTitle ? <Text style={{ color: colors.muted, marginTop: 4 }}>{t('Als Nächstes', 'Next', 'Następne')}: {currentChain.nextTitle}</Text> : null}
-              <View style={{ height: 6, backgroundColor: colors.bg, borderRadius: 3, overflow: 'hidden', marginTop: 6 }}>
-                <View style={{ width: `${Math.round(currentChain.nextPercent || 0)}%`, height: 6, backgroundColor: (currentChain.nextPercent || 0) >= 100 ? '#2bb673' : colors.primary }} />
-              </View>
-              <Text style={{ color: colors.muted, marginTop: 4 }}>{Math.round(currentChain.nextPercent || 0)}% {(currentChain.nextPercent || 0) >= 100 ? t('abgeschlossen','completed','ukończone') : ''}</Text>
-            </View>
           ) : (
-            <Text style={{ color: colors.muted, marginTop: 6 }}>{t('Kein aktives Event.', 'No active event.', 'Brak aktywnego wydarzenia.')}</Text>
+            <View style={{ marginTop: 6 }}>
+              <Text style={{ color: colors.text }}>{currentEvent.title(lng2 as any)}</Text>
+              <View style={{ height: 6, backgroundColor: colors.bg, borderRadius: 3, overflow: 'hidden', marginTop: 6 }}>
+                <View style={{ width: `${Math.round(eventProgress.percent || 0)}%`, height: 6, backgroundColor: (eventProgress.percent || 0) >= 100 ? '#2bb673' : colors.primary }} />
+              </View>
+              <Text style={{ color: colors.muted, marginTop: 4 }}>{Math.round(eventProgress.percent || 0)}% {(eventProgress.percent || 0) >= 100 ? t('abgeschlossen','completed','ukończone') : ''}</Text>
+            </View>
           )}
         </View>
 
