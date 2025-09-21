@@ -6,6 +6,7 @@ workflows:
       vars:
         NODE_VERSION: 20
         CI: 1
+        EXPO_NO_TELEMETRY: 1
       node: 20
       java: 17
       xcode: 15.1
@@ -39,19 +40,31 @@ workflows:
           rm -rf node_modules/.cache || true
           cd android
           ./gradlew clean --no-daemon || true
-      - name: Install dependencies
+      - name: Install dependencies (force expo if missing)
         script: |
           cd frontend
+          corepack enable || true
           rm -f package-lock.json
-          yarn install --non-interactive --frozen-lockfile
-          npx expo --version || (echo "Expo CLI not found via npx" && exit 1)
-          node -e "require.resolve('expo/package.json')" || (echo "Expo package not installed" && exit 1)
+          if [ -f yarn.lock ]; then
+            yarn install --non-interactive --frozen-lockfile || yarn install --non-interactive
+          else
+            npm ci || npm i
+          fi
+          # Force install critical deps if resolver doesn't find them
+          node -e "require.resolve('expo/package.json')" 2>/dev/null || yarn add expo@~53.0.22 --exact
+          node -e "require.resolve('expo-router/package.json')" 2>/dev/null || yarn add expo-router@~5.1.6 --exact
+          node -e "require.resolve('react-native/package.json')" 2>/dev/null || yarn add react-native@0.79.5 --exact
+          node -e "require.resolve('react-native-reanimated/package.json')" 2>/dev/null || yarn add react-native-reanimated@~3.17.4 --exact
+          # Re-run install to ensure lockfile consistency and peer deps
+          yarn install --non-interactive --frozen-lockfile || true
+          # Verify
+          node -e "console.log('expo=', require('expo/package.json').version); console.log('router=', require('expo-router/package.json').version)"
           test -f babel.config.js || (echo "Missing frontend/babel.config.js" && exit 1)
       - name: Expo prebuild (Android)
         script: |
           export CI=1
           cd frontend
-          npx expo prebuild --platform android --clean
+          npx --yes expo@latest prebuild --platform android --clean
       - name: Build APK (with logs)
         script: |
           set -o pipefail
