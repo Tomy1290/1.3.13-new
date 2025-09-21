@@ -350,13 +350,21 @@ export default function GalleryScreen() {
           <TouchableOpacity onPress={()=> setViewer({visible:false})} style={{ position: 'absolute', top: 40, right: 16, zIndex: 2 }}>
             <Ionicons name='close' size={28} color={'#fff'} />
           </TouchableOpacity>
-          <PinchGestureHandler onGestureEvent={(e:any)=> { const s = e.nativeEvent.scale || 1; setScale(Math.min(4, Math.max(1, s))); }} onHandlerStateChange={(e:any)=>{ if (e.nativeEvent.state===GHState.END) { /* keep scale */ } }}>
+          {Platform.OS === 'android' ? (
             <View style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').height*0.8, alignItems: 'center', justifyContent: 'center' }}>
               {viewer.uri ? (
-                <Image source={{ uri: viewer.uri }} style={{ width: '90%', height: '90%', transform: [{ scale }], resizeMode: 'contain' }} />
+                <Image source={{ uri: viewer.uri }} style={{ width: '90%', height: '90%' }} resizeMode='contain' />
               ) : null}
             </View>
-          </PinchGestureHandler>
+          ) : (
+            <PinchGestureHandler onGestureEvent={(e:any)=> { const s = e.nativeEvent.scale || 1; setScale(Math.min(4, Math.max(1, s))); }} onHandlerStateChange={(e:any)=>{ if (e.nativeEvent.state===GHState.END) { /* keep scale */ } }}>
+              <View style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').height*0.8, alignItems: 'center', justifyContent: 'center' }}>
+                {viewer.uri ? (
+                  <Image source={{ uri: viewer.uri }} style={{ width: '90%', height: '90%', transform: [{ scale }], resizeMode: 'contain' }} />
+                ) : null}
+              </View>
+            </PinchGestureHandler>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
