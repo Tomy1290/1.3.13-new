@@ -12,7 +12,6 @@ import { useAppStore } from "../src/store/useStore";
 import { 
   initializeNotifications, 
   cancelNotification, 
-  testNotification, 
   scheduleDailyNext
 } from "../src/utils/notifications";
 import { TimePicker } from "../src/components/TimePicker";
