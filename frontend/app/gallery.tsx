@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Modal, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Modal, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,16 @@ function useThemeColors(theme: string) {
 function bytesFromBase64(b64: string) { try { const l = b64.includes(',')? b64.split(',')[1].length : b64.length; return Math.floor(l * (3/4)); } catch { return 0; } }
 
 export default function GalleryScreen() {
+  function fmtKey(key?: string) {
+    try {
+      if (!key) return '—';
+      const [y, m, d] = key.split('-');
+      if (!y || !m || !d) return key;
+      return `${d.padStart(2,'0')}.${m.padStart(2,'0')}.${y}`;
+    } catch {
+      return key || '—';
+    }
+  }
   const state = useAppStore();
   const router = useRouter();
   const colors = useThemeColors(state.theme);
@@ -84,8 +94,9 @@ export default function GalleryScreen() {
 
   // A/B compare
   const photosDays = Object.keys(state.gallery).sort();
-  const [aDay, setADay] = useState<string | undefined>(photosDays[0]);
-  const [bDay, setBDay] = useState<string | undefined>(photosDays[1] || photosDays[0]);
+  // Compare mode flow (Variant A): start button under calendar, then pick 1st day and 2nd day on the calendar
+  const [aDay, setADay] = useState<string | undefined>(undefined);
+  const [bDay, setBDay] = useState<string | undefined>(undefined);
   const [aIdx, setAIdx] = useState(0);
   const [bIdx, setBIdx] = useState(0);
 
@@ -122,36 +133,86 @@ export default function GalleryScreen() {
           ) : null}
         </View>
 
-        {/* Calendar */}
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <TouchableOpacity onPress={()=>{ const d=new Date(monthDate); d.setMonth(d.getMonth()-1); setMonthDate(d); }} style={{ padding: 6 }}>
-              <Ionicons name='chevron-back' size={18} color={colors.text} />
+        {/* Calendar (styled like Cycle) */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}> 
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <TouchableOpacity onPress={() => { const d = new Date(monthDate); d.setMonth(d.getMonth() - 1); setMonthDate(d); }} accessibilityLabel='Vorheriger Monat'>
+              <Ionicons name='chevron-back' size={20} color={colors.text} />
             </TouchableOpacity>
-            <Text style={{ color: colors.text, fontWeight: '700' }}>{monthDate.toLocaleDateString(state.language==='en'?'en-GB':(state.language==='pl'?'pl-PL':'de-DE'), { month: 'long', year: 'numeric' })}</Text>
-            <TouchableOpacity onPress={()=>{ const d=new Date(monthDate); d.setMonth(d.getMonth()+1); setMonthDate(d); }} style={{ padding: 6 }}>
-              <Ionicons name='chevron-forward' size={18} color={colors.text} />
+            <Text style={{ color: colors.text, fontWeight: '700' }}>{new Date(monthDate.getFullYear(), monthDate.getMonth(), 1).toLocaleDateString(state.language==='de'?'de-DE':(state.language==='pl'?'pl-PL':'en-US'), { month: 'long', year: 'numeric' })}</Text>
+            <TouchableOpacity onPress={() => { const d = new Date(monthDate); d.setMonth(d.getMonth() + 1); setMonthDate(d); }} accessibilityLabel='Nächster Monat'>
+              <Ionicons name='chevron-forward' size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-            {Array.from({length:firstWeekday}).map((_,i)=> (
-              <View key={`emp${i}`} style={{ width: '13%', alignItems: 'center' }}>
-                <Text style={{ color: 'transparent' }}>.</Text>
-              </View>
+          {/* Weekday header (Mon start) */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+            {[state.language==='de'?['Mo','Di','Mi','Do','Fr','Sa','So']:(state.language==='pl'?['Pn','Wt','Śr','Cz','Pt','So','Nd']:['Mo','Tu','We','Th','Fr','Sa','Su'])].flat().map((d, i) => (
+              <Text key={i} style={{ color: colors.muted, width: `${100/7}%`, textAlign: 'center' }}>{d}</Text>
             ))}
-            {Array.from({length:daysInMonth}).map((_,i)=>{
-              const day=i+1; const key = toKey(new Date(monthDate.getFullYear(), monthDate.getMonth(), day));
-              const has = daysWithPhotosSet.has(key);
-              const selected = key===selectedDateKey;
-              return (
-                <TouchableOpacity key={key} onPress={()=> setSelectedDateKey(key)} style={{ width: '13%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: selected?colors.primary:colors.muted, backgroundColor: selected?colors.primary+'20':'transparent' }}>
-                  <Text style={{ color: colors.text }}>{day}</Text>
-                  {has ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 2 }} /> : null}
-                </TouchableOpacity>
-              );
-            })}
           </View>
-          <Text style={{ color: colors.muted, marginTop: 8 }}>Ausgewählt: {selectedDateKey}</Text>
+          {/* Grid */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
+            {(() => {
+              const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+              const pad = (first.getDay() + 6) % 7; // Monday first
+              const blanks = Array.from({ length: pad });
+              const days: Date[] = []; const d = new Date(first);
+              while (d.getMonth() === monthDate.getMonth()) { days.push(new Date(d)); d.setDate(d.getDate() + 1); }
+              return (
+                <>
+                  {blanks.map((_, i) => (<View key={`b${i}`} style={{ width: `${100/7}%`, height: 44 }} />))}
+                  {days.map((dayDate, i) => {
+                    const key = toKey(dayDate);
+                    const has = daysWithPhotosSet.has(key);
+                    const isFuture = +dayDate > +new Date();
+                    const selected = key === selectedDateKey;
+                    const onDayPress = () => {
+                      setSelectedDateKey(key);
+                      if (compareMode === 'selectingA') { setADay(key); setCompareMode('selectingB'); }
+                      else if (compareMode === 'selectingB') { if (aDay && key === aDay) return; setBDay(key); setCompareMode('show'); }
+                    };
+                    return (
+                      <TouchableOpacity key={key} disabled={isFuture} style={{ width: `${100/7}%`, height: 44, alignItems: 'center', justifyContent: 'center', opacity: isFuture ? 0.5 : 1 }} onPress={onDayPress} accessibilityLabel={`Tag ${key}`}>
+                        <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: selected ? `${colors.primary}22` : 'transparent', borderWidth: selected ? 2 : 0, borderColor: selected ? colors.primary : 'transparent' }}>
+                          <Text style={{ color: colors.text }}>{dayDate.getDate()}</Text>
+                          {has ? <View style={{ position: 'absolute', bottom: 3, width: 18, height: 2, backgroundColor: colors.primary, borderRadius: 1 }} /> : null}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </View>
+          <Text style={{ color: colors.muted, marginTop: 8 }}>{state.language==='de'?'Ausgewählt':'Selected'}: {selectedDateKey}</Text>
+          {/* Compare controls under calendar */}
+          <View style={{ marginTop: 10 }}>
+            {compareMode === 'idle' ? (
+              <TouchableOpacity disabled={Object.keys(state.gallery).length < 2} onPress={() => { setADay(undefined); setBDay(undefined); setAIdx(0); setBIdx(0); setCompareMode('selectingA'); }} style={{ alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.primary, opacity: Object.keys(state.gallery).length < 2 ? 0.5 : 1 }}>
+                <Text style={{ color: colors.text }}>{state.language==='de'?'Vergleich starten':'Start compare'}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {compareMode === 'selectingA' ? (
+              <Text style={{ color: colors.muted }}>{state.language==='de'?'Wähle im Kalender zuerst den Tag (Vorher).':'Pick the first day (Before) on the calendar.'}</Text>
+            ) : null}
+            {compareMode === 'selectingB' ? (
+              <Text style={{ color: colors.muted }}>{state.language==='de'?'Wähle den zweiten Tag (Nachher).':'Pick the second day (After).'}</Text>
+            ) : null}
+            {compareMode === 'show' ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name='swap-horizontal' size={16} color={colors.muted} />
+                  <Text style={{ color: colors.text, fontWeight: '700' }}>{state.language==='de'?'Vorher':'Before'}: {aDay}</Text>
+                </View>
+                <Text style={{ color: colors.muted }}>→</Text>
+                <Text style={{ color: colors.text, fontWeight: '700' }}>{state.language==='de'?'Nachher':'After'}: {bDay}</Text>
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity onPress={() => setCompareMode('idle')} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.muted }}>
+                  <Text style={{ color: colors.text }}>{state.language==='de'?'Vergleich beenden':'End compare'}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
         </View>
 
         {/* Add photo */}
@@ -172,9 +233,17 @@ export default function GalleryScreen() {
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {selectedPhotos.map((p,i)=> (
-                <TouchableOpacity key={p.id} onPress={()=>{ setScale(1); setViewer({ visible: true, uri: p.base64 }); }} onLongPress={()=> state.deletePhoto(selectedDateKey, p.id)}>
-                  <Image source={{ uri: p.base64 }} style={{ width: 100, height: 140, borderRadius: 8 }} />
-                </TouchableOpacity>
+                <View key={p.id} style={{ width: 100, height: 140 }}>
+                  <TouchableOpacity activeOpacity={0.9} onPress={()=>{ setScale(1); setViewer({ visible: true, uri: p.base64 }); }} style={{ width: '100%', height: '100%' }}>
+                    <Image source={{ uri: p.base64 }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={()=> Alert.alert(state.language==='de'?'Bild löschen?':'Delete photo?', state.language==='de'?'Möchtest du dieses Bild wirklich löschen?':'Do you really want to delete this photo?', [
+                    { text: state.language==='de'?'Abbrechen':'Cancel', style: 'cancel' },
+                    { text: state.language==='de'?'Löschen':'Delete', style: 'destructive', onPress: ()=> state.deletePhoto(selectedDateKey, p.id) },
+                  ])} accessibilityLabel='Foto löschen' style={{ position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 14, padding: 6 }}>
+                    <Ionicons name='trash' size={16} color={'#fff'} />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}
@@ -194,57 +263,60 @@ export default function GalleryScreen() {
 
         {/* A/B compare */}
         <View style={[styles.card, { backgroundColor: colors.card }]}> 
-          <Text style={{ color: colors.text, fontWeight: '700' }}>A/B-Vergleich</Text>
-          {photosDays.length<1 ? (<Text style={{ color: colors.muted, marginTop: 6 }}>Zu wenige Daten</Text>) : (
+          <Text style={{ color: colors.text, fontWeight: '700' }}>{state.language==='de'?'Vorher/Nachher':'Before/After'}</Text>
+          {photosDays.length<1 ? (
+            <Text style={{ color: colors.muted, marginTop: 6 }}>Zu wenige Daten</Text>
+          ) : (
             <View style={{ marginTop: 6 }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {photosDays.map((k)=> (
-                    <TouchableOpacity key={k} onPress={()=> setADay(k)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.muted, backgroundColor: aDay===k?colors.primary:'transparent' }}>
-                      <Text style={{ color: aDay===k?'#fff':colors.text }}>{k}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {/* Bildauswahl (nur Indizes), Tage werden über den Kalender gewählt */}
+              {compareMode === 'show' ? (
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {(state.gallery[aDay||'']||[]).map((p,idx)=> (
+                        <TouchableOpacity key={p.id} onPress={()=> setAIdx(idx)} style={{ paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.muted, backgroundColor: aIdx===idx?colors.primary:'transparent' }}>
+                          <Text style={{ color: aIdx===idx?'#fff':colors.text }}>{state.language==='de'?'Vorher':'Before'} {idx+1}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {(state.gallery[bDay||'']||[]).map((p,idx)=> (
+                        <TouchableOpacity key={p.id} onPress={()=> setBIdx(idx)} style={{ paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.muted, backgroundColor: bIdx===idx?colors.primary:'transparent' }}>
+                          <Text style={{ color: bIdx===idx?'#fff':colors.text }}>{state.language==='de'?'Nachher':'After'} {idx+1}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
                 </View>
-              </ScrollView>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {photosDays.map((k)=> (
-                    <TouchableOpacity key={k} onPress={()=> setBDay(k)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.muted, backgroundColor: bDay===k?colors.primary:'transparent' }}>
-                      <Text style={{ color: bDay===k?'#fff':colors.text }}>{k}</Text>
-                    </TouchableOpacity>
-                  ))}
+              ) : null}
+
+              {compareMode === 'show' ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name='swap-horizontal' size={16} color={colors.muted} />
+                    <Text style={{ color: colors.text, fontWeight: '700', marginLeft: 6 }}>
+                      {(state.language==='de'?'Vorher':'Before')}: {fmtKey(aDay)}
+                    </Text>
+                    <Text style={{ color: colors.muted, marginHorizontal: 6 }}>→</Text>
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      {(state.language==='de'?'Nachher':'After')}: {fmtKey(bDay)}
+                    </Text>
+                  </View>
                 </View>
-              </ScrollView>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {(state.gallery[aDay||'']||[]).map((p,idx)=> (
-                      <TouchableOpacity key={p.id} onPress={()=> setAIdx(idx)} style={{ paddingHorizontal: 6, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.muted, backgroundColor: aIdx===idx?colors.primary:'transparent' }}>
-                        <Text style={{ color: aIdx===idx?'#fff':colors.text }}>A {idx+1}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {(state.gallery[bDay||'']||[]).map((p,idx)=> (
-                      <TouchableOpacity key={p.id} onPress={()=> setBIdx(idx)} style={{ paddingHorizontal: 6, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: colors.muted, backgroundColor: bIdx===idx?colors.primary:'transparent' }}>
-                        <Text style={{ color: bIdx===idx?'#fff':colors.text }}>B {idx+1}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, justifyContent: 'space-between' }}>
+              ) : null}
+
+              <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, alignItems: 'center' }}>
                   {aDay && (state.gallery[aDay]||[])[aIdx] ? (
                     <Image source={{ uri: (state.gallery[aDay]||[])[aIdx].base64 }} style={{ width: '100%', height: 260, borderRadius: 8 }} resizeMode='cover' />
-                  ) : <Text style={{ color: colors.muted }}>A —</Text>}
+                  ) : <Text style={{ color: colors.muted }}>{state.language==='de'?'Vorher —':'Before —'}</Text>}
                 </View>
                 <View style={{ flex: 1, alignItems: 'center' }}>
                   {bDay && (state.gallery[bDay]||[])[bIdx] ? (
                     <Image source={{ uri: (state.gallery[bDay]||[])[bIdx].base64 }} style={{ width: '100%', height: 260, borderRadius: 8 }} resizeMode='cover' />
-                  ) : <Text style={{ color: colors.muted }}>B —</Text>}
+                  ) : <Text style={{ color: colors.muted }}>{state.language==='de'?'Nachher —':'After —'}</Text>}
                 </View>
               </View>
             </View>
