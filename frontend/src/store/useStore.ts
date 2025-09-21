@@ -25,7 +25,7 @@ export type DayData = {
 
 export type Cycle = { start: string; end?: string };
 
-export type Goal = { targetWeight: number; targetDate: string; startWeight: number; active: boolean };
+export type Goal = { targetWeight: number; targetDate: string; startWeight: number; active: boolean; startDate?: string };
 export type Reminder = { id: string; type: string; time: string; enabled: boolean; label?: string };
 export type ChatMessage = { id: string; sender: "user" | "bot"; text: string; createdAt: number };
 export type SavedMessage = { id: string; title: string; category?: string; tags?: string[]; text?: string; createdAt: number };

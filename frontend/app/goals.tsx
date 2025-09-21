@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../src/store/useStore';
 import { LineChart } from 'react-native-gifted-charts';
+import { toKey } from '../src/utils/date';
 
 function useThemeColors(theme: string) {
   if (theme === 'pink_pastel') return { bg: '#fff0f5', card: '#ffe4ef', primary: '#d81b60', text: '#3a2f33', muted: '#8a6b75' };
@@ -14,7 +15,6 @@ function useThemeColors(theme: string) {
 }
 
 function daysBetween(a: Date, b: Date) { return Math.max(1, Math.round((+b - +a) / (1000*60*60*24))); }
-function toKey(dt: Date) { const d = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()); return d.toISOString().slice(0,10); }
 
 export default function GoalsScreen() {
   const state = useAppStore();
@@ -22,7 +22,7 @@ export default function GoalsScreen() {
   const colors = useThemeColors(state.theme);
   const [info, setInfo] = useState(false);
 
-  const weights = useMemo(() => Object.values(state.days).filter((d)=> typeof d.weight==='number').sort((a:any,b:any)=> a.date.localeCompare(b.date)), [state.days]);
+  const weights = useMemo(() => Object.values(state.days).filter((d:any)=> typeof d.weight==='number').sort((a:any,b:any)=> a.date.localeCompare(b.date)), [state.days]);
   const lastW = useMemo(()=> weights.length? Number((weights[weights.length-1] as any).weight): undefined, [weights]);
   const firstW = useMemo(()=> weights.length? Number((weights[0] as any).weight): undefined, [weights]);
   const firstDate = useMemo(()=> weights.length? new Date((weights[0] as any).date): undefined, [weights]);
@@ -30,22 +30,26 @@ export default function GoalsScreen() {
   const [targetWInput, setTargetWInput] = useState(state.goal?.targetWeight ? String(state.goal.targetWeight) : (lastW?String(lastW):''));
   const [targetDateInput, setTargetDateInput] = useState(state.goal?.targetDate || '');
 
+  const effectiveStartDateKey = state.goal?.startDate || (firstDate ? toKey(firstDate) : toKey(new Date()));
+  const effectiveStartDate = useMemo(()=> { const [y,m,d] = effectiveStartDateKey.split('-').map(n=>parseInt(n,10)); return new Date(y, m-1, d); }, [effectiveStartDateKey]);
+  const effectiveStartWeight = state.goal?.startWeight ?? firstW ?? lastW ?? 0;
+
   const planVsActual = useMemo(() => {
-    if (!firstW || !firstDate || !targetDateInput || !lastW) return null;
+    if (!effectiveStartWeight || !effectiveStartDate || !targetDateInput || !lastW) return null;
     const targetDate = new Date(targetDateInput);
     if (isNaN(+targetDate)) return null;
-    const totalDays = daysBetween(firstDate, targetDate);
-    const elapsed = daysBetween(firstDate, new Date());
+    const totalDays = daysBetween(effectiveStartDate, targetDate);
+    const elapsed = daysBetween(effectiveStartDate, new Date());
     const ratio = Math.min(1, Math.max(0, elapsed/totalDays));
-    const plannedToday = firstW + (Number(targetWInput||firstW) - firstW) * ratio;
+    const plannedToday = effectiveStartWeight + (Number(targetWInput||effectiveStartWeight) - effectiveStartWeight) * ratio;
     const delta = lastW - plannedToday;
     return { plannedToday, actual: lastW, delta };
-  }, [firstW, firstDate, targetDateInput, lastW, targetWInput]);
+  }, [effectiveStartWeight, effectiveStartDate, targetDateInput, lastW, targetWInput]);
 
   // Pace 7d and trend/ETA
   const metrics = useMemo(() => {
     if (weights.length < 2) return { pace: 0, eta: null as Date|null, trend: '—', plateau: false };
-    const map: Record<string, number> = {}; weights.forEach((w:any)=>{ map[w.date]=Number(w.weight)||0; });
+    const map: Record<string, number> = {}; (weights as any[]).forEach((w:any)=>{ map[w.date]=Number(w.weight)||0; });
     const today = weights[weights.length-1] as any;
     const d7 = new Date(today.date); d7.setDate(d7.getDate()-7);
     let refKey = toKey(d7);
@@ -121,16 +125,17 @@ export default function GoalsScreen() {
     const tw = parseFloat((targetWInput||'').replace(',','.'));
     if (!tw || !targetDateInput) return;
     const startW = firstW || (lastW||tw);
-    state.setGoal({ targetWeight: tw, targetDate: targetDateInput, startWeight: startW, active: true });
+    const startDate = toKey(new Date());
+    state.setGoal({ targetWeight: tw, targetDate: targetDateInput, startWeight: startW, active: true, startDate });
   }
 
   // ===== Ziel-Diagramm: Soll vs. Ist =====
   const chartData = useMemo(() => {
     try {
-      if (!firstDate || !firstW || !targetDateInput) return null;
+      if (!effectiveStartDate || !effectiveStartWeight || !targetDateInput) return null;
       const targetDate = new Date(targetDateInput);
       if (isNaN(+targetDate)) return null;
-      const start = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
+      const start = new Date(effectiveStartDate.getFullYear(), effectiveStartDate.getMonth(), effectiveStartDate.getDate());
       const end = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
       const totalDays = daysBetween(start, end);
       // Build map of actual weights by date + forward-fill when sampling
@@ -154,16 +159,16 @@ export default function GoalsScreen() {
       // Labels density: ~6 labels max
       const labelEvery = Math.max(1, Math.ceil(dates.length / 6));
       const labels: string[] = [];
-      const targetW = Number((targetWInput||firstW));
+      const targetW = Number((targetWInput||effectiveStartWeight));
       // Interpolate planned line and sample actual line (forward-fill last known)
       const planned: {value:number, customDataPoint?: ()=>JSX.Element}[] = [];
       const actual: {value:number, customDataPoint?: ()=>JSX.Element}[] = [];
-      let lastKnown = firstW;
+      let lastKnown = effectiveStartWeight;
       dates.forEach((d, idx) => {
         const k = toKey(d);
         if (typeof weightMap[k] === 'number') lastKnown = weightMap[k];
         const dayPos = Math.min(totalDays, Math.max(0, daysBetween(start, d)));
-        const plannedVal = firstW + (targetW - firstW) * (dayPos / totalDays);
+        const plannedVal = effectiveStartWeight + (targetW - effectiveStartWeight) * (dayPos / totalDays);
         const isToday = k === todayKey;
         planned.push({ value: plannedVal });
         actual.push({ value: lastKnown, ...(isToday ? { customDataPoint: () => (<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary, borderWidth: 2, borderColor: '#fff' }} />) } : {}) });
@@ -175,7 +180,7 @@ export default function GoalsScreen() {
       const spacing = Math.max(12, Math.floor((chartWidth - 24) / Math.max(1, dates.length-1)));
       return { planned, actual, labels, spacing };
     } catch { return null; }
-  }, [firstDate, firstW, targetDateInput, targetWInput, weights, state.days, state.theme]);
+  }, [effectiveStartDate, effectiveStartWeight, targetDateInput, targetWInput, weights, state.days, state.theme]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -244,7 +249,7 @@ export default function GoalsScreen() {
               <Text style={{ color: colors.muted }}>Geplant heute: {planVsActual.plannedToday.toFixed(1)} kg</Text>
               <Text style={{ color: colors.muted }}>Ist: {planVsActual.actual.toFixed(1)} kg ({planVsActual.delta>=0?'+':''}{planVsActual.delta.toFixed(1)} kg)</Text>
               <View style={{ height: 8, backgroundColor: colors.bg, borderRadius: 4, overflow: 'hidden', marginTop: 6 }}>
-                <View style={{ width: `${Math.min(100, Math.max(0, (planVsActual.actual - (state.goal?.targetWeight||planVsActual.actual)) / ((firstW||planVsActual.actual) - (state.goal?.targetWeight||planVsActual.actual) || 1) * 100))}%`, height: 8, backgroundColor: colors.primary }} />
+                <View style={{ width: `${Math.min(100, Math.max(0, (planVsActual.actual - (state.goal?.targetWeight||planVsActual.actual)) / ((effectiveStartWeight||planVsActual.actual) - (state.goal?.targetWeight||planVsActual.actual) || 1) * 100))}%`, height: 8, backgroundColor: colors.primary }} />
               </View>
             </View>
           )}
