@@ -5,6 +5,7 @@ workflows:
     environment:
       vars:
         NODE_VERSION: 20
+        CI: 1
       node: 20
       java: 17
       xcode: 15.1
@@ -43,13 +44,14 @@ workflows:
           cd frontend
           rm -f package-lock.json
           yarn install --non-interactive --frozen-lockfile
-          npx expo --version
-          # Ensure babel config exists (reanimated plugin & expo-router)
+          npx expo --version || (echo "Expo CLI not found via npx" && exit 1)
+          node -e "require.resolve('expo/package.json')" || (echo "Expo package not installed" && exit 1)
           test -f babel.config.js || (echo "Missing frontend/babel.config.js" && exit 1)
       - name: Expo prebuild (Android)
         script: |
+          export CI=1
           cd frontend
-          npx expo prebuild --platform android --non-interactive --clean
+          npx expo prebuild --platform android --clean
       - name: Build APK (with logs)
         script: |
           set -o pipefail
