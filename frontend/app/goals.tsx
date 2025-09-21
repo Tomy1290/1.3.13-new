@@ -173,7 +173,7 @@ export default function GoalsScreen() {
         const plannedVal = effectiveStartWeight + (targetW - effectiveStartWeight) * (dayPos / totalDays);
         const isToday = k === todayKey;
         planned.push({ value: plannedVal });
-        actual.push({ value: lastKnown });
+        actual.push({ value: lastKnown, ...(isToday ? { customDataPoint: () => (<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary, borderWidth: 2, borderColor: '#fff' }} />) } : {}) });
         // labels
         const dt = d; const lbl = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}`;
         if (idx % labelEvery === 0 || isToday || idx===dates.length-1 || idx===0) labels.push(lbl); else labels.push('');
