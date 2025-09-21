@@ -359,6 +359,30 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.muted, marginTop: 6 }}>{state.language==='de'?'Aktiviert kurze, lokale Tipps im Chat und in Analysen.':(state.language==='pl'?'Aktywuje krótkie, lokalne wskazówki na czacie i w analizach.':'Enables short, local tips in chat and analyses.')}</Text>
         </View>
 
+        {/* Wöchentliche Events */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}> 
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name='calendar' size={18} color={colors.primary} />
+              <Text style={{ color: colors.text, fontWeight: '700', marginLeft: 8 }}>{state.language==='de'?'Wöchentliche Events':(state.language==='pl'?'Wydarzenia tygodniowe':'Weekly events')}</Text>
+            </View>
+            <Switch value={state.eventsEnabled} onValueChange={(v)=> state.setEventsEnabled(v)} thumbColor={'#fff'} trackColor={{ true: colors.primary, false: colors.muted }} />
+          </View>
+          <Text style={{ color: colors.muted, marginTop: 6 }}>{state.language==='de'?'Schaltet die wöchentlichen Herausforderungen ein/aus.':(state.language==='pl'?'Włącza/wyłącza cotygodniowe wyzwania.':'Enable/disable weekly challenges.')}</Text>
+        </View>
+
+        {/* Backup */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}> 
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name='cloud-upload' size={18} color={colors.primary} />
+            <Text style={{ color: colors.text, fontWeight: '700', marginLeft: 8 }}>{state.language==='de'?'Backup & Wiederherstellung':(state.language==='pl'?'Kopia zapasowa i przywracanie':'Backup & restore')}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+            <TouchableOpacity onPress={exportData} style={[styles.badge, { borderColor: colors.muted }]}><Text style={{ color: colors.text }}>{state.language==='de'?'Export':(state.language==='pl'?'Eksport':'Export')}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={importData} style={[styles.badge, { borderColor: colors.muted }]}><Text style={{ color: colors.text }}>{state.language==='de'?'Import':(state.language==='pl'?'Import':'Import')}</Text></TouchableOpacity>
+          </View>
+        </View>
+
         {/* Debugging deaktiviert */}
         {/*
         <View style={[styles.card, { backgroundColor: colors.card }]}> 
