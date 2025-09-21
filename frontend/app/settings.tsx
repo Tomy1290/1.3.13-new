@@ -359,21 +359,19 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.muted, marginTop: 6 }}>{state.language==='de'?'Aktiviert kurze, lokale Tipps im Chat und in Analysen.':(state.language==='pl'?'Aktywuje krótkie, lokalne wskazówki na czacie i w analizach.':'Enables short, local tips in chat and analyses.')}</Text>
         </View>
 
-        {/* Debug – Notifications */}
+        {/* Debugging deaktiviert */}
+        {/*
         <View style={[styles.card, { backgroundColor: colors.card }]}> 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name='bug' size={18} color={colors.primary} />
               <Text style={{ color: colors.text, fontWeight: '700', marginLeft: 8 }}>Debug – Notifications</Text>
             </View>
-            <Switch value={debugSwitch} onValueChange={(v)=>{ setDebugSwitch(v); if (v) { router.push('/debug/notifications'); setTimeout(()=> setDebugSwitch(false), 400); } }} thumbColor={'#fff'} trackColor={{ true: colors.primary, false: colors.muted }} />
+            <Switch value={false} onValueChange={()=>{}} thumbColor={'#fff'} trackColor={{ true: colors.primary, false: colors.muted }} />
           </View>
-          <Text style={{ color: colors.muted, marginTop: 6 }}>Öffnet den Debug-Bildschirm, um geplante Benachrichtigungen zu prüfen oder zu löschen.</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-            <TouchableOpacity onPress={exportData} style={[styles.badge, { borderColor: colors.muted }]}><Text style={{ color: colors.text }}>Export</Text></TouchableOpacity>
-            <TouchableOpacity onPress={importData} style={[styles.badge, { borderColor: colors.muted }]}><Text style={{ color: colors.text }}>Import</Text></TouchableOpacity>
-          </View>
+          <Text style={{ color: colors.muted, marginTop: 6 }}>Debug deaktiviert.</Text>
         </View>
+        */}
 
         {/* App info */}
         <View style={[styles.card, { backgroundColor: colors.card }]}> 
