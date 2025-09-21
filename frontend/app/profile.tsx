@@ -146,9 +146,10 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ color: colors.text, width: 120 }}>Geschlecht</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                {(['female','male','other','na'] as const).map((g) => (
+                {(['female','male'] as const).map((g) => (
                   <TouchableOpacity key={g} onPress={() => state.setProfile({ gender: g })} style={[styles.badge, { borderColor: colors.muted, backgroundColor: state.profile.gender===g?colors.primary:'transparent' }]}>
-                    <Text style={{ color: state.profile.gender===g?'#fff':colors.text }}>{g==='female'?'w':'m'}</Text>
+                    <Ionicons name={g==='female'?'female':'male'} size={16} color={state.profile.gender===g?'#fff':colors.text} />
+                    <Text style={{ color: state.profile.gender===g?'#fff':colors.text, marginLeft: 6 }}>{g==='female'?'Frau':'Mann'}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
